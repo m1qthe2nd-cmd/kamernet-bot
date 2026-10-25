@@ -1,0 +1,42 @@
+name: Kamernet bot
+ 
+on:
+  schedule:
+    - cron: "*/5 * * * *"      # every 5 minutes (GitHub's minimum; runs can be delayed)
+  workflow_dispatch:            # lets you start it manually from the Actions tab
+    inputs:
+      baseline:
+        description: "First-run mode: save current listings without sending Telegram messages"
+        type: boolean
+        default: false
+ 
+# Never run two checks at the same time
+concurrency:
+  group: kamernet
+  cancel-in-progress: false
+ 
+permissions:
+  contents: read
+ 
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+ 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+ 
+      - name: Install packages
+        run: pip install -r requirements.txt
+ 
+      - name: Check Kamernet
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python kamernet_bot_supabase.py --once ${{ inputs.baseline && '--baseline' || '' }}
